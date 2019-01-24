@@ -19,23 +19,31 @@ namespace aisdi
 		using key_type = KeyType;
 		using mapped_type = ValueType;
 		using value_type = std::pair<const key_type, mapped_type>;
-		using vector_ = std::vector<value_type>;
+		using bucket_type = typename std::vector<value_type>;
 		using size_type = std::size_t;
 		using reference = value_type & ;
 		using const_reference = const value_type&;
+		using table_type = typename std::array<bucket_type, 1000>;
 
 		class ConstIterator;
 		class Iterator;
 		using iterator = Iterator;
 		using const_iterator = ConstIterator;
 	private:
-		std::array<vector_, 1000> table;
+		table_type table;
 
-		bool insert(value_type &elem)
+		size_type get_hash(size_type key_val)
 		{
-			std::cout << "insert\n";
-		}
+			auto key = key_val;
+			key = key * key;
 
+			// Extracting required number of digits ( here, 8 ). 
+			key = key / 10000;
+			key = key % 1000;
+
+			// Returning the key value. 
+			return key;
+		}
 
 	public:
 		HashMap():table()
@@ -45,14 +53,34 @@ namespace aisdi
 		{
 			for (auto i = list.begin(); i != list.end(); ++i)
 			{
-				table[10].push_back(*i);
+				value_type object = *i;
+				key_type key = object.first;
+				size_type index = get_hash(static_cast<size_type> (key));
+				table[index].push_back(object);
 			}
 			cout << list.size() << " objects added to HashMap at position 10\n";
 		}
 
+		bool insert(key_type key, mapped_type value)
+		{
+			value_type new_pair(key, value);
+			size_type index = get_hash(static_cast<size_type> (key));
+			bucket_type *vec = &table[index];
+			for (auto it : *vec)
+			{
+				if (it.first == key)
+				{
+					cout << "this key is already occupied\n";
+					return 0;
+				}
+			}
+			(*vec).push_back(new_pair);
+			return 1;
+		}
+
 		mapped_type return_element(int key)
 		{
-			vector_ vec = table[10];
+			bucket_type vec = table[10];
 			auto it = vec.begin();
 			for (; it != vec.end(); ++it)
 			{
@@ -62,6 +90,55 @@ namespace aisdi
 			throw std::out_of_range("nie znaleziono takiego objektu");
 		}
 
+		void print()
+		{
+			// iterate over std::array (table)
+			vector<int> v;
+			int n = 0;
+			for (const auto it : table)
+			{
+				// iterate over each vector in hash table
+				for (const auto vec_it : it)
+				{
+					cout << vec_it.first << "\t " << vec_it.second << endl;
+					++n;
+				}
+				if (n != 0)
+					v.push_back(n);
+
+				n = 0;
+			}
+			int sum = 0;
+			for (const auto i : v)
+				sum += i;
+
+			cout << sum << " elements found" << endl;
+			cout << "in " << v.size() << " different vectors\n";
+		}
+
+		void print_stats()
+		{	// iterate over std::array (table)
+			vector<int> v;
+			int n = 0;
+			for (const auto it : table)
+			{
+				// iterate over each vector in hash table
+				for (const auto vec_it : it)
+				{
+					++n;
+				}
+				if (n != 0)
+					v.push_back(n);
+
+				n = 0;
+			}
+			int sum = 0;
+			for (const auto i : v)
+				sum += i;
+
+			cout << sum << " elements found" << endl;
+			cout << "in " << v.size() << " different vectors\n";
+		}
 		HashMap(const HashMap& other)
 		{
 			(void)other;
@@ -93,7 +170,6 @@ namespace aisdi
 
 		mapped_type& operator[](const key_type& key)
 		{
-			(void)key;
 			throw std::runtime_error("TODO");
 		}
 
@@ -149,9 +225,14 @@ namespace aisdi
 			return !(*this == other);
 		}
 
+		//const table_type *tp, bucket_type *bt, bucket_iter_type &bi, table_iter_type &ti
 		iterator begin()
 		{
-			throw std::runtime_error("TODO");
+			auto table_it = table.begin();
+			while ((*table_it).size() == 0)
+				++table_it;
+			iterator begin(this, table_it);
+			return begin;
 		}
 
 		iterator end()
@@ -184,28 +265,62 @@ namespace aisdi
 	class HashMap<KeyType, ValueType>::ConstIterator
 	{
 	public:
+		using table_type = typename HashMap::table_type;
+		using bucket_type = typename HashMap::bucket_type;
+		using table_iter_type = typename HashMap::table_type::iterator;
+		using bucket_iter_type = typename HashMap::bucket_type::iterator;
 		using reference = typename HashMap::const_reference;
 		using iterator_category = std::bidirectional_iterator_tag;
 		using value_type = typename HashMap::value_type;
-		using pointer = const typename HashMap::value_type*;
+		using pointer = const typename HashMap::value_type *;
+
+	private:
+		table_type *table_ptr;
+		table_iter_type table_iter;
+		bucket_type *bucket;
+		bucket_iter_type bucket_iter;	
+
+	public:
 
 		explicit ConstIterator()
 		{}
 
+		ConstIterator(const table_type *tp, table_iter_type &ti)
+			: table_ptr(tp), table_iter(ti), bucket(*ti), bucket_iter((*ti)->begin()) {}
+
+
 		ConstIterator(const ConstIterator& other)
 		{
-			(void)other;
-			throw std::runtime_error("TODO");
+			bucket_iter = other.bucket_iter;
+			table_iter = other.table_iter;
 		}
 
 		ConstIterator& operator++()
 		{
-			throw std::runtime_error("TODO");
+			if (bucket_iter != --bucket->end())
+				++bucket_iter;
+			else
+			{
+				while (table_iter != (*table_ptr).end())
+				{
+					bucket = &(*table_iter);
+					if (bucket->size() != 0)
+					{
+						bucket_iter = bucket->begin();
+						break;
+					}
+					++table_iter;	//next vector;
+				}
+			// table_iter == table.end();
+			}
+			return *this;
 		}
 
 		ConstIterator operator++(int)
 		{
-			throw std::runtime_error("TODO");
+			auto old = *this;
+			++(*this);
+			return old;
 		}
 
 		ConstIterator& operator--()
@@ -225,7 +340,8 @@ namespace aisdi
 
 		pointer operator->() const
 		{
-			return &this->operator*();
+			//return const_cast<reference>(ConstIterator::operator*());
+			return (&this->operator*());
 		}
 
 		bool operator==(const ConstIterator& other) const
@@ -244,11 +360,18 @@ namespace aisdi
 	class HashMap<KeyType, ValueType>::Iterator : public HashMap<KeyType, ValueType>::ConstIterator
 	{
 	public:
+		using table_type = typename HashMap::table_type;
+		using bucket_type = typename HashMap::bucket_type;
+		using table_iter_type = typename HashMap::table_type::iterator;
+		using bucket_iter_type = typename HashMap::bucket_type::iterator;
 		using reference = typename HashMap::reference;
 		using pointer = typename HashMap::value_type*;
 
 		explicit Iterator()
 		{}
+		
+		Iterator(const table_type *tp, table_iter_type &ti)
+			: ConstIterator(tp, ti) {}
 
 		Iterator(const ConstIterator& other)
 			: ConstIterator(other)
