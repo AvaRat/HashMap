@@ -17,13 +17,19 @@ using namespace std;
 
 
 
+
 int main()
 {
-	HashMap<int, string> my_map;
-	unordered_map<int, string> stl_map;
-	test_map(my_map);
-	test_map(stl_map);
-	
+	HashMap<int, string> my_map = { {19088889, "marcel"}, {182900122, "Henio"}, {197652, "Lusia"} };
+	const unordered_map<int, string> stl_map;
+	auto iter__ =  stl_map.begin();
+
+	HashMap<int, string> m = { {190, "marcel"}, {18292, "Henio"}, {197652, "Lusia"} };
+	auto it = m.begin();
+	cout << it->second << endl;
+	cout << (++it)->second << endl;
+
+
 
 /*
 	cout << "bucket count: " << stl_map.bucket_count() << endl;
