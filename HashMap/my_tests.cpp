@@ -22,21 +22,23 @@ int main()
 {
 	HashMap<int, string> my_map = { {19088889, "marcel"}, {182900122, "Henio"}, {197652, "Lusia"} };
 	const unordered_map<int, string> stl_map;
-	auto iter__ =  stl_map.begin();
 
+	/*
 	HashMap<int, string> m = { {19088889, "marcel"}, {182900122, "Henio"}, {197652, "Lusia"} };
-	HashMap<int, string> m2 = {{182900122, "Henio"}, {197652, "Lusia"}, {19088889, "marcel"} };
-	HashMap<int, string>::iterator it = m.end();
-	auto it2 = ++m.begin();
-	//if (m == m2)
-	//	cout << "rowne\n";
-	it = m.begin();
-	++it;
-	++it;
-	++it;
-	if (it == m.end())
-		cout << "rowny!!\n";
+	HashMap<int, string> x;
+	x[1424] = string{};
+	m.print();
+	cout << endl;
+	m = x;
+	m.print();
+	cout << endl;
+	x.print();
+	*/
+	
+//	m2.print();
 
+
+	
 
 /*
 	cout << "bucket count: " << stl_map.bucket_count() << endl;
