@@ -1,4 +1,5 @@
-﻿#pragma once
+#pragma once
+#pragma once
 #ifndef AISDI_MAPS_HASHMAP_H
 #define AISDI_MAPS_HASHMAP_H
 
@@ -9,11 +10,8 @@
 #include <algorithm>
 #include <array>
 #include <vector>
-#include <assert.h>
 #include <type_traits>
-
-#define bucket_count__ 10000
-
+#include <variant>
 
 namespace aisdi
 {
@@ -26,8 +24,8 @@ namespace aisdi
 		using mapped_type = ValueType;
 		using value_type = std::pair<key_type, mapped_type>;
 		using bucket_type = typename std::vector<value_type>;
-		using table_type = typename std::array<bucket_type, bucket_count__>;
-		
+		using table_type = typename std::array<bucket_type, 1000>;
+
 		using bucket_const_iterator = typename bucket_type::const_iterator;
 		using bucket_iterator = typename bucket_type::iterator;
 		using table_const_iterator = typename table_type::const_iterator;
@@ -36,14 +34,13 @@ namespace aisdi
 		using size_type = std::size_t;
 		using reference = value_type & ;
 		using const_reference = const value_type&;
-		
+
 
 		class ConstIterator;
 		class Iterator;
 		using iterator = Iterator;
 		using const_iterator = ConstIterator;
 	private:
-		size_t bucket_count_ = bucket_count__;
 		table_type table;
 		size_type items_count;
 		size_type last_bucket_index;
@@ -55,8 +52,8 @@ namespace aisdi
 			key = key * key;
 
 			// Extracting required number of digits ( here, 8 ). 
-			key = key / (bucket_count__*10);
-			key = key % bucket_count__;
+			key = key / 10000;
+			key = key % 1000;
 
 			// Returning the key value. 
 			return key;
@@ -64,7 +61,7 @@ namespace aisdi
 		bucket_const_iterator find_in_bucket(const bucket_type &bucket, const key_type &key)const
 		{
 			bucket_const_iterator it = bucket.begin();
-			for (;  it != bucket.end();  ++it)
+			for (; it != bucket.end(); ++it)
 			{
 				if ((*it).first == key)
 					break;
@@ -85,15 +82,7 @@ namespace aisdi
 			//return end iterator when cannot find
 		}
 
-		void update_indexes(size_type &index)
-		{
-			if (index > last_bucket_index)
-				last_bucket_index = index;
-			if (index < first_bucket_index)
-				first_bucket_index = index;
-		}
-
-		value_type& insert(const value_type &new_pair)
+		value_type& insert(value_type &new_pair)
 		{
 			size_type val = static_cast<size_type> (new_pair.first);
 			size_type index = get_hash(val);
@@ -108,22 +97,22 @@ namespace aisdi
 			}
 			(*vec).push_back(new_pair);
 			++items_count;
-			update_indexes(index);
-
+			if (index > last_bucket_index)
+				last_bucket_index = index;
+			if (index < first_bucket_index)
+				first_bucket_index = index;
 			return *(--(*vec).end());
 		}
 
 
 	public:
-		HashMap():table(), items_count(0), first_bucket_index(bucket_count__), 
-			last_bucket_index(0), bucket_count_(bucket_count__)
+		HashMap() :table(), items_count(0), first_bucket_index(999), last_bucket_index(0)
 		{}
 
-		HashMap(std::initializer_list<value_type> list):bucket_count_(bucket_count__)
+		HashMap(std::initializer_list<value_type> list)
 		{
-
 			last_bucket_index = 0;
-			first_bucket_index = bucket_count_;
+			first_bucket_index = 1000;
 			for (auto i = list.begin(); i != list.end(); ++i)
 			{
 				value_type object = *i;
@@ -136,7 +125,7 @@ namespace aisdi
 					first_bucket_index = index;
 			}
 			items_count = list.size();
-		//	cout << list.size() << " objects added to HashMap at position 10\n";
+			cout << list.size() << " objects added to HashMap at position 10\n";
 		}
 
 		mapped_type return_element(int key)
@@ -151,7 +140,7 @@ namespace aisdi
 			throw std::out_of_range("nie znaleziono takiego objektu");
 		}
 
-		void print()const
+		void print()
 		{
 			// iterate over std::array (table)
 			vector<int> v;
@@ -216,54 +205,19 @@ namespace aisdi
 			return last_bucket_index;
 		}
 
-		float load_factor()const
-		{
-			int sum = 0;
-			vector<int> n_elems;
-			for (auto it = table.begin(); it != table.end(); ++it)
-			{
-				n_elems.push_back((*it).size());
-				//cout << (*it).size() << endl;
-			}
-			for (const auto it : n_elems)
-				sum += it;
-			float avg = sum / n_elems.size();
-			float r = avg;
-
-			return r;
-		}
-
-		size_type bucket_count()const
-		{
-			return bucket_count_;
-		}
-
-		void clear() noexcept
-		{
-			for (auto i : table)
-			{
-				i.clear();
-			}
-			items_count = 0;
-			last_bucket_index = 0;
-			first_bucket_index = bucket_count() - 1;
-		}
-
 		HashMap(const HashMap& other)
 		{
-			if (*this == other)
-				return;
 			if (other.isEmpty())
 			{
-				for (auto it = table.begin(); it != table.end(); ++it)
+				for (table_iterator it = table.begin(); it != table.end(); ++it)
 				{
 					(*it).clear();
-				//	(*it).shrink_to_size();
+					//	(*it).shrink_to_size();
 				}
 			}
 			else
 			{
-				for (auto it = other.begin(); it != other.end(); ++it)
+				for (iterator it = other.begin(); it != other.end(); ++it)
 				{
 					insert(*it);
 				}
@@ -275,15 +229,11 @@ namespace aisdi
 		{
 			table = other.table;
 			items_count = other.items_count;
-			last_bucket_index = other.last_bucket_index;
-			first_bucket_index = other.last_bucket_index;
 			other.items_count = 0;
 		}
 
 		HashMap& operator=(const HashMap& other)
 		{
-			if (*this == other)
-				return *this;
 			if (other.isEmpty())
 			{
 				for (table_iterator it = table.begin(); it != table.end(); ++it)
@@ -294,7 +244,7 @@ namespace aisdi
 			}
 			else
 			{
-				for (const_iterator it = other.cbegin(); it != other.cend(); ++it)
+				for (iterator it = other.begin(); it != other.end(); ++it)
 				{
 					insert(*it);
 				}
@@ -307,8 +257,6 @@ namespace aisdi
 		{
 			table = other.table;
 			items_count = other.items_count;
-			last_bucket_index = other.last_bucket_index;
-			first_bucket_index = other.last_bucket_index;
 			other.items_count = 0;
 			return *this;
 		}
@@ -323,36 +271,20 @@ namespace aisdi
 
 		mapped_type& operator[](const key_type& key)
 		{
-			value_type new_val(key, string{});
-			size_type val = static_cast<size_type> (key);
-			size_type index = get_hash(val);
-			assert(index < bucket_count__);
-			bucket_type *vec = &table[index];
-			size_type dist = 0;
-			for (auto it : *vec)
-			{
-
-				if (it.first == key)
-				{
-					return ((*vec).begin() + dist)->second;
-				}
-				++dist;
-			}
-			(*vec).push_back(new_val);
-			++items_count;
-			update_indexes(index);
-			return (--(vec->end()))->second;
+			value_type new_pair(key, mapped_type{});
+			value_type *value = &insert(new_pair);
+			return (*value).second;
 		}
 
 		const mapped_type& valueOf(const key_type& key) const
 		{
 			size_type index = get_hash(static_cast<size_type> (key));
-			bucket_type *target_bucket =const_cast<bucket_type*>( &table[index]);
-			bucket_const_iterator it = find_in_bucket(*target_bucket, key);
-			if (it == target_bucket->cend())
+			bucket_type target_bucket = table[index];
+			bucket_const_iterator it = find_in_bucket(target_bucket, key);
+			if (it == target_bucket.cend())
 				throw std::out_of_range("element with this key doesn't exist");
 			else
-				return it->second;
+				return (*it).second;
 		}
 
 		mapped_type& valueOf(const key_type& key)
@@ -363,7 +295,7 @@ namespace aisdi
 			if (it == target_bucket->end())
 				throw std::out_of_range("element with this key doesn't exist");
 			else
-				return it->second;
+				return (*it).second;
 		}
 
 		const_iterator find(const key_type& key) const
@@ -400,14 +332,14 @@ namespace aisdi
 			if (bi == (*ti).end())
 				throw out_of_range("element with given key doeasne exist");
 			bucket_type *vec_ = &(*ti);
-// jak jest const key_type to nie moge usunac !!!!
-// wiec zrobilem bez const
+			// jak jest const key_type to nie moge usunac !!!!
+			// wiec zrobilem bez const
 			vec_->erase(bi);
 			vec_->shrink_to_fit();
 			--items_count;
 			// need to change first or last _bucket_index
 			if (vec_->empty())
-			{	
+			{
 				if (items_count == 0)
 				{
 					first_bucket_index = 999;
@@ -418,14 +350,14 @@ namespace aisdi
 				{
 					if (index == last_bucket_index)
 					{
-						while (table[index].empty() == true  && index > 0)
+						while (table[index].empty() == true && index > 0)
 							--index;
 
 						last_bucket_index = index;
 					}
 					else
 					{
-						while (table[index].empty() == true  && index < 1000)
+						while (table[index].empty() == true && index < 1000)
 							++index;
 
 						first_bucket_index = index;
@@ -434,7 +366,7 @@ namespace aisdi
 				}
 
 			}
-			
+
 		}
 
 		void remove(const const_iterator& it)
@@ -453,7 +385,7 @@ namespace aisdi
 			for (const_iterator it = begin(); it != end(); ++it)
 			{
 				cout << it->first << "\t" << it->second << endl;
-				cout << other_it->first << "\t" << other_it->second << endl; 
+				cout << other_it->first << "\t" << other_it->second << endl;
 				if (*it != *(other_it))
 					return false;
 				++other_it;
@@ -495,7 +427,7 @@ namespace aisdi
 			else
 			{
 				table_iterator table_it = table.begin() + last_bucket_index;
-				
+
 				bucket_iterator bi = (*table_it).end();
 				iterator it(this, &table, table_it, bi);
 				return it;
@@ -560,7 +492,7 @@ namespace aisdi
 		using map_type = typename HashMap<KeyType, ValueType>;
 
 		using table_const_iter_type = typename HashMap::table_const_iterator;
-		using table_iter_type = typename HashMap::table_iterator;	
+		using table_iter_type = typename HashMap::table_iterator;
 		using bucket_const_iter_type = typename HashMap::bucket_const_iterator;
 		using bucket_iter_type = typename HashMap::bucket_iterator;
 
@@ -576,8 +508,8 @@ namespace aisdi
 
 		const bucket_type *bucket;
 		bucket_const_iter_type bucket_iter;
-		
-		
+
+
 	public:
 
 		explicit ConstIterator()
@@ -592,13 +524,13 @@ namespace aisdi
 
 		ConstIterator(const ConstIterator& other)
 		{
-			
+
 			map_ptr = other.map_ptr;
 			bucket_iter = other.bucket_iter;
 			table_iter = other.table_iter;
 			bucket = other.bucket;
 			table_ptr = other.table_ptr;
-			
+
 		}
 
 		bucket_type get_container()
@@ -629,7 +561,7 @@ namespace aisdi
 				{
 					// koniec iteracji, iterator powinien byc map.end()
 					*this = map_ptr->cend();
-				//	bucket_iter = bucket->begin();
+					//	bucket_iter = bucket->begin();
 				}
 			}
 			return *this;
@@ -712,97 +644,41 @@ namespace aisdi
 
 		using reference = typename HashMap::reference;
 		using pointer = typename HashMap::value_type*;
-	private:
-		const map_type *map_ptr;
-		const table_type *table_ptr;
-		table_iter_type table_iter;
 
-		 bucket_type *bucket;
-		bucket_iter_type bucket_iter;
 	public:
+		Iterator(const map_type *map, const table_type *tp, table_iter_type &ti, bucket_iter_type &bi)
+			: ConstIterator(map, tp, ti, bi) {}
 
 		explicit Iterator()
 		{}
-		
-		Iterator(const map_type *map, const table_type *tp, table_iter_type &ti, bucket_iter_type &bi)
-			: map_ptr(map), table_ptr(tp), table_iter(ti), bucket(&(*ti)), bucket_iter(bi), ConstIterator(map, tp, ti, bi) {}
 
-		Iterator(const ConstIterator& other): ConstIterator(other)
-		{
-			/*map_ptr = other.map_ptr;
-			table_ptr = other.table_ptr;
-			table_iter = other.table_iter;
-			bucket = other.bucket;
-			bucket_iter = other.bucket_iter;
-			*/
-		}
+		Iterator(const ConstIterator& other)
+			: ConstIterator(other)
+		{}
 
 		Iterator& operator++()
 		{
 			ConstIterator::operator++();
-			if (bucket_iter == bucket->end())
-				throw std::out_of_range("cannot increment empty map");
-			else if (bucket_iter != --(bucket->end()))
-				++bucket_iter;
-			else
-			{
-				if (table_iter - table_ptr->begin() == map_ptr->get_last_bucket_index())
-				{
-					bucket_iter = (*table_iter).end();
-					cout << "roznica taka sama -> jestesmy na ostatnim koszu\n";
-				}
-				else
-				{
-					++table_iter;
-					while (table_iter != (*table_ptr).end())
-					{
-						bucket = &(*(table_iter));
-						if (bucket->size() != 0)
-						{
-							//	bucket_iter = bucket->begin();
-							break;
-						}
-						++table_iter;
-					}
-					bucket_iter = bucket->begin();
-				}
-			}
 			return *this;
 		}
 
 		Iterator operator++(int)
 		{
 			auto result = *this;
-			++(*this);
+			ConstIterator::operator++();
 			return result;
 		}
 
 		Iterator& operator--()
 		{
 			ConstIterator::operator--();
-			if (bucket_iter != bucket->begin())
-				--bucket_iter;
-			else
-			{
-				while (table_iter != table_ptr->begin())
-				{
-					bucket = (&(*(--table_iter)));
-					if (bucket->size() != 0)
-					{
-						bucket_iter = --(bucket->end());
-						break;
-					}
-				}
-				if (bucket->size() == 0)
-					throw std::out_of_range("cannot decrement");
-			}
 			return *this;
 		}
 
 		Iterator operator--(int)
 		{
 			auto result = *this;
-			--(*this);
+			ConstIterator::operator--();
 			return result;
 		}
 
@@ -813,11 +689,10 @@ namespace aisdi
 
 		reference operator*() const
 		{
-			if (bucket_iter == bucket->end())
-				throw out_of_range("cannot dereference end iterator");
-			return *(bucket_iter);
+			// ugly cast, yet reduces code duplication.
+			return const_cast<reference>(ConstIterator::operator*());
 		}
-
+	
 	};
 
 }

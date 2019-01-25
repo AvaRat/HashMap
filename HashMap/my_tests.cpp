@@ -20,31 +20,20 @@ using namespace std;
 
 int main()
 {
-	HashMap<int, string> my_map = { {19088889, "marcel"}, {182900122, "Henio"}, {197652, "Lusia"} };
-	const unordered_map<int, string> stl_map;
+	HashMap<uint32_t, string> my_map;
+	 HashMap<uint64_t, string> mpo = {  {42, "Henio"}, {27, "marcel"} };
+	 unordered_map<uint32_t, string> stl_map;
 
-	/*
-	HashMap<int, string> m = { {19088889, "marcel"}, {182900122, "Henio"}, {197652, "Lusia"} };
-	HashMap<int, string> x;
-	x[1424] = string{};
-	m.print();
-	cout << endl;
-	m = x;
-	m.print();
-	cout << endl;
-	x.print();
-	*/
-	
-//	m2.print();
+	 vector<size_t> vec = { 1000, 10000, 100000, 1000000 };
+	 string name1 = "myHashMap";
+	 string name2 = "stl's unordered_map";
+	 string file_output = "C:/Users/marce/OneDrive/Dokumenty/Studia/AISDI/Project_2_try/compare_containers.csv";
+//	 test_map(my_map, vec, name1);
+
+	 compare_containers<HashMap<uint32_t, string>, unordered_map<uint32_t, string>>
+		 (my_map, stl_map, name1, name2, vec, file_output);
 
 
-	
-
-/*
-	cout << "bucket count: " << stl_map.bucket_count() << endl;
-	cout << "max bucket count: " << stl_map.max_bucket_count() << endl;
-	cout << "load factor: " << stl_map.load_factor() << endl;
-	*/
 	return 0;
 }
 

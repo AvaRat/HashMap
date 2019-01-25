@@ -24,6 +24,9 @@
     <ClInclude Include="my_tests.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="alternative_HashMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
