@@ -256,7 +256,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(GivenEmptyMap_WhenGettingIterators_ThenBeginEquals
 	Map<K> map;
 
 	BOOST_CHECK(begin(map) == end(map));
-//	BOOST_CHECK(const_cast<const Map<K>&>(map).begin() == map.end());
+	BOOST_CHECK(const_cast<const Map<K>&>(map).begin() == map.end());
 	BOOST_CHECK(map.cbegin() == map.cend());
 }
 

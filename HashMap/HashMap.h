@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #ifndef AISDI_MAPS_HASHMAP_H
 #define AISDI_MAPS_HASHMAP_H
 
@@ -21,7 +21,7 @@ namespace aisdi
 	public:
 		using key_type = KeyType;
 		using mapped_type = ValueType;
-		using value_type = std::pair<const key_type, mapped_type>;
+		using value_type = std::pair<key_type, mapped_type>;
 		using bucket_type = typename std::vector<value_type>;
 		using table_type = typename std::array<bucket_type, 1000>;
 		
@@ -96,6 +96,7 @@ namespace aisdi
 			++items_count;
 			return *(--(*vec).end());
 		}
+
 
 	public:
 		HashMap():table(), items_count(0)
@@ -177,27 +178,43 @@ namespace aisdi
 		}
 		HashMap(const HashMap& other)
 		{
-
-			(void)other;
-			throw std::runtime_error("TODO");
+			for (iterator it = other.begin();  it != other.end();  ++it)
+			{
+				insert(*it);
+			}
+			
 		}
 
 		HashMap(HashMap&& other)
 		{
-			(void)other;
-			throw std::runtime_error("TODO");
+			table = std::move(other.table);
+			items_count = other.items_count;
+			other.items_count = 0;
 		}
 
 		HashMap& operator=(const HashMap& other)
 		{
-			(void)other;
-			throw std::runtime_error("TODO");
+			if (other.isEmpty())
+			{
+				for (const_iterator it = begin(); it !=end();  ++it)
+				{
+					auto conc = it.get_container();
+				}
+				items_count = 0;
+			}
+			for (iterator it = other.begin(); it != other.end(); ++it)
+			{
+				insert(*it);
+			}
+			return *this;
 		}
 
 		HashMap& operator=(HashMap&& other)
 		{
-			(void)other;
-			throw std::runtime_error("TODO");
+			table = std::move(other.table);
+			items_count = other.items_count;
+			other.items_count = 0;
+			return *this;
 		}
 
 		bool isEmpty() const
@@ -239,26 +256,38 @@ namespace aisdi
 
 		const_iterator find(const key_type& key) const
 		{
-			(void)key;
-			throw std::runtime_error("TODO");
+			size_type index = get_hash(static_cast<size_type>(key));
+			table_const_iterator ti = table.begin() += index;
+			bucket_const_iterator bi = find_in_bucket(*ti, key);
+			const_iterator i(&table, ti, bi);
+			return i;
 		}
 
 		iterator find(const key_type& key)
 		{
-			(void)key;
-			throw std::runtime_error("TODO");
+			size_type index = get_hash(static_cast<size_type>(key));
+			table_iterator ti = table.begin() += index;
+			bucket_iterator bi = find_in_bucket(*ti, key);
+			iterator i(&table, ti, bi);
+			return i;
 		}
 
 		void remove(const key_type& key)
 		{
-			(void)key;
-			throw std::runtime_error("TODO");
+			size_type index = get_hash(static_cast<size_type>(key));
+			table_iterator ti = table.begin() += index;
+			bucket_const_iterator bi = find_in_bucket(*ti, key);
+			bucket_type *vec_ = &(*ti);
+// jak jest const key_type to nie moge usunac !!!!
+// wiec zrobilem bez const
+			vec_->erase(bi);
+			vec_->shrink_to_fit();
+			--items_count;
 		}
 
 		void remove(const const_iterator& it)
 		{
-			(void)it;
-			throw std::runtime_error("TODO");
+			bucket_type vec_ = table[100];		//const_cast<bucket_type>(it.get_container());
 		}
 
 		size_type getSize() const
@@ -268,7 +297,16 @@ namespace aisdi
 
 		bool operator==(const HashMap& other) const
 		{
-			return table == other.table;
+			const_iterator other_it = other.cbegin();
+			for (const_iterator it = cbegin(); it != cend(); ++it)
+			{
+				cout << it->first << "\t" << it->second << endl;
+				cout << other_it->first << "\t" << other_it->second << endl; 
+				if (*it != *(other_it))
+					return false;
+				++other_it;
+			}
+			return true;
 		}
 
 		bool operator!=(const HashMap& other) const
@@ -279,9 +317,18 @@ namespace aisdi
 		//const table_type *tp, bucket_type *bt, bucket_iter_type &bi, table_iter_type &ti
 		iterator begin()
 		{
+			if ((*this).isEmpty())
+			{
+				bucket_iterator bi = (*(--table.end())).end();
+				table_iterator ti = --table.end();
+				iterator it(&table, ti, bi);
+				return it;
+			}
 			table_iterator table_it = table.begin();
-			while ((*table_it).size() == 0)
+			while ((*table_it).size() == 0 && table_it != table.end())
 				++table_it;
+			if (table_it == table.end())
+				throw std::out_of_range("map is empty and u cannot increment iterator");
 			bucket_iterator bi = (*table_it).begin();
 			iterator it(&table, table_it, bi);
 			return it;
@@ -289,9 +336,18 @@ namespace aisdi
 
 		iterator end()
 		{
+			if ((*this).isEmpty())
+			{
+				bucket_iterator bi = (*(--table.end())).end();
+				table_iterator ti = --table.end();
+				iterator it(&table, ti, bi);
+				return it;
+			}
 			table_iterator table_it = --table.end();
 			while ((*table_it).size() == 0)
+			{
 				--table_it;
+			}
 			bucket_iterator bi = (*table_it).end();
 			iterator it(&table, table_it, bi);
 			return it;
@@ -299,37 +355,41 @@ namespace aisdi
 
 		const_iterator cbegin()const
 		{
-			table_const_iterator table_it = table.cbegin();
-			size_type y_offset = 0;
-			while ((*table_it).size() == 0)
+			if ((*this).isEmpty())
 			{
-				++table_it;
-				++y_offset;
+				bucket_const_iterator bi = (*(--table.end())).end();
+				table_const_iterator ti = --table.end();
+				const_iterator it(&table, ti, bi);
+				return it;
 			}
-			bucket_const_iterator bi = (*table_it).cbegin();
-			return const_iterator(&table, table_it, bi);
-			//const table_type *tp, table_const_iter_type &ti, bucket_const_iter_type &bi
-		/*	
-		/*	using table_const_iter_type = typename HashMap::table_const_iterator;
-		/*	using table_iter_type = typename HashMap::table_iterator;	
-		/*	using bucket_const_iter_type = typename HashMap::bucket_const_iterator;
-		/*	using bucket_iter_type = typename HashMap::bucket_iterator;
-		*/
-			throw std::runtime_error("TODO");
+			table_const_iterator table_it = table.begin();
+			while ((*table_it).size() == 0 && table_it != table.end())
+				++table_it;
+			if (table_it == table.end())
+				throw std::out_of_range("map is empty and u cannot increment iterator");
+			bucket_const_iterator bi = (*table_it).begin();
+			const_iterator it(&table, table_it, bi);
+			return it;
 		}
 
 		const_iterator cend()const
 		{
-			/*
+			if ((*this).isEmpty())
+			{
+				bucket_const_iterator bi = (*(--table.end())).end();
+				table_const_iterator ti = --table.end();
+				const_iterator it(&table, ti, bi);
+				return it;
+			}
 			table_const_iterator table_it = --table.end();
 			while ((*table_it).size() == 0)
+			{
 				--table_it;
+			}
 			bucket_const_iterator bi = (*table_it).end();
-			const table_type *t = &table;
-			const_iterator it(t, table_it, bi);
+			const_iterator it(&table, table_it, bi);
 			return it;
-			*/
-			throw std::runtime_error("TODO");
+
 		}
 
 
@@ -363,20 +423,14 @@ namespace aisdi
 		using value_type = typename HashMap::value_type;
 		using pointer = const typename HashMap::value_type *;
 
-		using table_mixed_iter = variant< table_iter_type, table_const_iter_type>;
-		using bucket_mixed_iter = variant< bucket_iter_type, bucket_const_iter_type>;
-
-		using table_it__ = typename std::iterator_traits;
-
 	private:
 	
 		const table_type *table_ptr;
-		table_mixed_iter table_iter;
-		const bucket_type *bucket;
-		bucket_mixed_iter bucket_iter;
-
-		bucket_const_iter_type bucket_iter;
 		table_const_iter_type table_iter;
+
+		const bucket_type *bucket;
+		bucket_const_iter_type bucket_iter;
+		
 		
 	public:
 
@@ -385,33 +439,9 @@ namespace aisdi
 
 		ConstIterator(const table_type *tp, table_iter_type &ti, bucket_iter_type &bi)
 			: table_ptr(tp), table_iter(ti), bucket(&(*ti)), bucket_iter(bi) {}
-/*
-		ConstIterator(const table_type *tp, table_const_iter_type &ti, bucket_const_iter_type &bi)
-			: table_ptr(tp), bucket()
-		{
-			table_iter = ti;
-			bucket_iter = bi;
-			bucket = const_cast<bucket_type *>(&(*ti));
-		}
-*/
-		ConstIterator(const table_type *tp, table_const_iter_type &ti, bucket_const_iter_type &bi)
-			: table_ptr(tp), bucket(&(*ti)), bucket_c_iter(bi), table_c_iter(ti) {}
 
-		ConstIterator(const table_type *tp, bucket_type *bt ) 
-			: table_ptr(tp), bucket(bt)
-		{
-			/*
-			table_iterator ti = (*tp).begin();
-			for (size_type i = 0; i < table_offset; ++i)
-				++ti;
-			bucket_iter_type bi = (*ti).begin();
-			for (size_type i = 0; i < bucket_offset; ++i)
-				++bi;
-
-			table_iter = ti;
-			bucket_iter = bi;
-			*/
-		}
+		ConstIterator(const table_type *tp, table_const_iter_type &ti, bucket_const_iter_type &bi)
+			: table_ptr(tp), bucket(&(*ti)), bucket_iter(bi), table_iter(ti) {}
 
 
 		ConstIterator(const ConstIterator& other)
@@ -422,36 +452,30 @@ namespace aisdi
 			table_ptr = other.table_ptr;
 		}
 
+		bucket_type get_container()
+		{
+			return (*table_iter);
+		}
+
 		ConstIterator& operator++()
 		{
-			bucket_const_iter_type bucket_it;
-			table_const_iter_type table_it;
-			if (bucket_iter.index() == 0)
-			{
-				bucket_it = get<0>(bucket_iter);
-				table_it = get<0>(table_iter);
-			}
+			if (bucket_iter == bucket->end())
+				throw std::out_of_range("cannot increment empty map");
+			if (bucket_iter != --(bucket->end()))
+				++bucket_iter;
 			else
 			{
-				bucket_it = get<1>(bucket_iter);
-				table_it = get<1>(table_iter);
-			}
-
-			if (bucket_c_iter != --(bucket->end()))
-				++bucket_c_iter;
-			else
-			{
-				while (table_it != (*table_ptr).end())
+				while (table_iter != --(*table_ptr).end())
 				{
-					bucket = &(*(++table_it));
+					bucket = &(*(++table_iter));
 					if (bucket->size() != 0)
 					{
-						bucket_c_iter = bucket->begin();
+						bucket_iter = bucket->begin();
 						break;
 					}
 				}
-			// table_iter == table.end();
-			// and it means that we cannot dereference this iterator
+				if (table_iter == --(table_ptr->end()))
+					bucket_iter = bucket->begin();
 			}
 			return *this;
 		}
@@ -465,33 +489,21 @@ namespace aisdi
 
 		ConstIterator& operator--()
 		{
-		//	if constexpr (holds_alternative<table_const_iter_type>(table_iter)
-			bucket_const_iter_type bucket_it;
-			table_const_iter_type table_it;
-			if (bucket_iter.index() == 0)
-			{
-				bucket_it = get<0>(bucket_iter);
-				table_it = get<0>(table_iter);
-			}
+			if (bucket_iter != bucket->begin())
+				--bucket_iter;
 			else
 			{
-				bucket_it = get<1>(bucket_iter);
-				table_it = get<1>(table_iter);
-			}
-
-			if (bucket_it != bucket->begin())
-				--bucket_it;
-			else
-			{
-				while (table_it != table_ptr->begin())
+				while (table_iter != table_ptr->begin())
 				{
-					bucket = (&(*(--table_it)));
+					bucket = (&(*(--table_iter)));
 					if (bucket->size() != 0)
 					{
-						bucket_it = --(bucket->end());
+						bucket_iter = --(bucket->end());
 						break;
 					}
 				}
+				if (table_iter == (*table_ptr).begin() && bucket->size() == 0)
+					throw std::out_of_range("cannot decrement");
 			}
 			return *this;
 		}
@@ -505,10 +517,9 @@ namespace aisdi
 
 		reference operator*() const
 		{
-			if(holds_alternative<bucket_const_iter_type>(bucket_iter))
-				return *(get<1>(bucket_iter));
-			else
-				return *(get<0>(bucket_iter));
+			if (bucket_iter == bucket->end())
+				throw out_of_range("cannot dereference end iterator");
+			return *(bucket_iter);
 		}
 
 		pointer operator->() const
@@ -519,8 +530,12 @@ namespace aisdi
 
 		bool operator==(const ConstIterator& other) const
 		{
-			(void)other;
-			throw std::runtime_error("TODO");
+			if (table_iter == other.table_iter)
+			{
+				return (bucket_iter == other.bucket_iter);
+			}
+			else
+				return false;
 		}
 
 		bool operator!=(const ConstIterator& other) const
@@ -535,44 +550,87 @@ namespace aisdi
 	public:
 		using table_type = typename HashMap::table_type;
 		using bucket_type = typename HashMap::bucket_type;
+
 		using table_iter_type = typename HashMap::table_iterator;
 		using bucket_iter_type = typename HashMap::bucket_iterator;
+
 		using reference = typename HashMap::reference;
 		using pointer = typename HashMap::value_type*;
+	private:
+		const table_type *table_ptr;
+		table_iter_type table_iter;
+
+		 bucket_type *bucket;
+		bucket_iter_type bucket_iter;
+	public:
 
 		explicit Iterator()
 		{}
 		
-		Iterator(const table_type *tp, table_iter_type &ti, bucket_iter_type &bt)
-			: ConstIterator(tp, ti, bt) {}
+		Iterator(const table_type *tp, table_iter_type &ti, bucket_iter_type &bi)
+			: table_ptr(tp), table_iter(ti), bucket(&(*ti)), bucket_iter(bi), ConstIterator(tp, ti, bi) {}
 
 		Iterator(const ConstIterator& other)
-			: ConstIterator(other)
-		{}
+		{
+
+		}
 
 		Iterator& operator++()
 		{
-			ConstIterator::operator++();
+			if (bucket_iter == bucket->end())
+				throw std::out_of_range("cannot increment empty map");
+			if (bucket_iter != --(bucket->end()))
+				++bucket_iter;
+			else
+			{
+				while (table_iter != --(*table_ptr).end())
+				{
+					bucket = &(*(++table_iter));
+					if (bucket->size() != 0)
+					{
+						bucket_iter = bucket->begin();
+						break;
+					}
+				}
+
+			//	if (table_iter == --(table_ptr->end()))
+			//		bucket_iter = bucket->begin();
+			}
 			return *this;
 		}
 
 		Iterator operator++(int)
 		{
 			auto result = *this;
-			ConstIterator::operator++();
+			++(*this);
 			return result;
 		}
 
 		Iterator& operator--()
 		{
-			ConstIterator::operator--();
+			if (bucket_iter != bucket->begin())
+				--bucket_iter;
+			else
+			{
+				while (table_iter != table_ptr->begin())
+				{
+					bucket = (&(*(--table_iter)));
+					if (bucket->size() != 0)
+					{
+						bucket_iter = --(bucket->end());
+						break;
+					}
+				}
+				if (table_iter == (*table_ptr).begin() && bucket->size() == 0)
+					throw std::out_of_range("cannot decrement");
+			}
 			return *this;
 		}
 
 		Iterator operator--(int)
 		{
 			auto result = *this;
-			ConstIterator::operator--();
+			--(*this);
 			return result;
 		}
 
@@ -583,9 +641,26 @@ namespace aisdi
 
 		reference operator*() const
 		{
-			// ugly cast, yet reduces code duplication.
-			return const_cast<reference>(ConstIterator::operator*());
+			if (bucket_iter == bucket->end())
+				throw out_of_range("cannot dereference end iterator");
+			return *(bucket_iter);
 		}
+
+		bool operator==(const Iterator& other) const
+		{
+			if (table_iter == other.table_iter)
+			{
+				return (bucket_iter == other.bucket_iter);
+			}
+			else
+				return false;
+		}
+
+		bool operator!=(const Iterator& other) const
+		{
+			return !(*this == other);
+		}
+
 	};
 
 }

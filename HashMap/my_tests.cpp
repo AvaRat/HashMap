@@ -24,11 +24,18 @@ int main()
 	const unordered_map<int, string> stl_map;
 	auto iter__ =  stl_map.begin();
 
-	HashMap<int, string> m = { {190, "marcel"}, {18292, "Henio"}, {197652, "Lusia"} };
-	auto it = m.begin();
-	cout << it->second << endl;
-	cout << (++it)->second << endl;
-
+	HashMap<int, string> m = { {19088889, "marcel"}, {182900122, "Henio"}, {197652, "Lusia"} };
+	HashMap<int, string> m2 = {{182900122, "Henio"}, {197652, "Lusia"}, {19088889, "marcel"} };
+	HashMap<int, string>::iterator it = m.end();
+	auto it2 = ++m.begin();
+	//if (m == m2)
+	//	cout << "rowne\n";
+	it = m.begin();
+	++it;
+	++it;
+	++it;
+	if (it == m.end())
+		cout << "rowny!!\n";
 
 
 /*
