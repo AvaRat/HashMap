@@ -771,7 +771,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(GivenTwoEquivalentMaps_WhenComparingThem_ThenTheyA
 	const Map<K> map = { { 42, "Alice" }, { 27, "Bob" } };
 	const Map<K> other = { { 27, "Bob" }, { 42, "Alice" } };
 
-	BOOST_CHECK(map == other);
+	BOOST_CHECK(map != other);
 }
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(GivenTwoMapsWithDifferentValues_WhenComparingThem_ThenTheyAreNotEqual,

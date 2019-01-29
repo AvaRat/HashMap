@@ -227,7 +227,7 @@ namespace aisdi
 			}
 			for (const auto it : n_elems)
 				sum += it;
-			float avg = sum / n_elems.size();
+			float avg = (float) sum / n_elems.size();
 			float r = avg;
 
 			return r;
@@ -258,7 +258,7 @@ namespace aisdi
 				for (auto it = table.begin(); it != table.end(); ++it)
 				{
 					(*it).clear();
-				//	(*it).shrink_to_size();
+					//(*it).shrink_to_size();
 				}
 			}
 			else
@@ -277,7 +277,7 @@ namespace aisdi
 			items_count = other.items_count;
 			last_bucket_index = other.last_bucket_index;
 			first_bucket_index = other.last_bucket_index;
-			other.items_count = 0;
+			other.items_count = 0;	
 		}
 
 		HashMap& operator=(const HashMap& other)
